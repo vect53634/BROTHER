@@ -6,6 +6,7 @@ import { Plus, Monitor, RefreshCw, Tv, Pin } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { AdCard } from '@/components/ad-card'
 import { AdFormDialog } from '@/components/ad-form-dialog'
+import { BlockingScreenPanel } from '@/components/blocking-screen-panel'
 import type { Ad } from '@/lib/db'
 
 export default function DashboardPage() {
@@ -153,6 +154,11 @@ export default function DashboardPage() {
               </div>
             </div>
           ))}
+        </div>
+
+        {/* Blocking Screens Panel */}
+        <div className="mb-8">
+          <BlockingScreenPanel />
         </div>
 
         {/* Ads grid */}
