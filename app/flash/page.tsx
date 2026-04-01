@@ -5,7 +5,8 @@ import Image from 'next/image'
 import useSWR, { mutate } from 'swr'
 import type { Ad } from '@/lib/db'
 
-const fetcher = (url: string) => fetch(url).then(r => r.json())
+const fetcher = (url: string) =>
+  fetch(url).then(r => r.json()).then(d => (Array.isArray(d) ? d : []))
 
 type AdType = 'image' | 'video' | 'web'
 

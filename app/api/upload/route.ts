@@ -1,15 +1,36 @@
 import { put } from '@vercel/blob'
 import { type NextRequest, NextResponse } from 'next/server'
 
-// Allow large file uploads (videos, etc.)
-export const maxDuration = 60
+// Disable Next.js body parser so large files can stream through
+export const config = {
+  api: {
+    bodyParser: false,
+  },
+}
+
+// Allow up to 5 minutes for large video uploads
+export const maxDuration = 300
 
 export async function POST(request: NextRequest) {
   try {
-    const contentType = request.headers.get('content-type') ?? ''
+    // Get filename + type from query params (set by the client for raw uploads)
+    const url = new URL(request.url)
+    const filenameParam = url.searchParams.get('filename')
+    const typeParam = url.searchParams.get('type') ?? undefined
 
+    // --- Raw body stream upload (preferred for large files) ---
+    if (filenameParam && request.body) {
+      const safeName = filenameParam.replace(/[^a-zA-Z0-9._-]/g, '_')
+      const blob = await put(safeName, request.body, {
+        access: 'public',
+        contentType: typeParam,
+      })
+      return NextResponse.json({ url: blob.url })
+    }
+
+    // --- Multipart form-data fallback (small files only) ---
+    const contentType = request.headers.get('content-type') ?? ''
     if (contentType.includes('multipart/form-data')) {
-      // Standard form upload
       const formData = await request.formData()
       const file = formData.get('file') as File | null
 
@@ -17,9 +38,9 @@ export async function POST(request: NextRequest) {
         return NextResponse.json({ error: 'No se proporcionó ningún archivo' }, { status: 400 })
       }
 
-      const filename = file.name.replace(/[^a-zA-Z0-9._-]/g, '_')
+      const safeName = file.name.replace(/[^a-zA-Z0-9._-]/g, '_')
 
-      const blob = await put(filename, file.stream(), {
+      const blob = await put(safeName, file.stream(), {
         access: 'public',
         contentType: file.type || undefined,
       })
@@ -27,21 +48,7 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ url: blob.url })
     }
 
-    // Fallback: raw body with filename query param
-    const url = new URL(request.url)
-    const filename = url.searchParams.get('filename') ?? `upload_${Date.now()}`
-    const fileType = url.searchParams.get('type') ?? undefined
-
-    if (!request.body) {
-      return NextResponse.json({ error: 'No se proporcionó ningún archivo' }, { status: 400 })
-    }
-
-    const blob = await put(filename, request.body, {
-      access: 'public',
-      contentType: fileType,
-    })
-
-    return NextResponse.json({ url: blob.url })
+    return NextResponse.json({ error: 'Formato de solicitud no soportado' }, { status: 400 })
   } catch (error) {
     console.error('Upload error:', error)
     return NextResponse.json(

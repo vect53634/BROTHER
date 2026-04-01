@@ -4,6 +4,8 @@ const sql = neon(process.env.DATABASE_URL!)
 
 export { sql }
 
+export type BlockingScreen = 'none' | 'maintenance' | 'outage' | 'terminal' | 'loading'
+
 export interface Ad {
   id: number
   title: string
@@ -82,4 +84,24 @@ export async function updateAd(
 
 export async function deleteAd(id: number): Promise<void> {
   await sql`DELETE FROM ads WHERE id = ${id}`
+}
+
+// ── Blocking Screens ──────────────────────────────────────────────────────────
+
+export async function getBlockingScreen(): Promise<BlockingScreen> {
+  try {
+    const rows = await sql`
+      SELECT value FROM display_settings WHERE key = 'blocking_screen'
+    `
+    return (rows[0]?.value ?? 'none') as BlockingScreen
+  } catch {
+    return 'none'
+  }
+}
+
+export async function setBlockingScreen(screen: BlockingScreen): Promise<void> {
+  await sql`
+    INSERT INTO display_settings (key, value) VALUES ('blocking_screen', ${screen})
+    ON CONFLICT (key) DO UPDATE SET value = ${screen}
+  `
 }
