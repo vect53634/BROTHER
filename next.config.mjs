@@ -6,11 +6,12 @@ const nextConfig = {
   images: {
     unoptimized: true,
   },
-  // Allow large file uploads (videos up to 500 MB via API routes)
+  // Remove practical upload caps for ad media uploads
   experimental: {
     serverActions: {
-      bodySizeLimit: '500mb',
+      bodySizeLimit: '5gb',
     },
+    proxyClientMaxBodySize: 0,
   },
 }
 
