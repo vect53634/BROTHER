@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useRef, useEffect } from 'react'
+import { upload } from '@vercel/blob/client'
 import { Upload, Video, Image as ImageIcon, Globe, X, Loader2 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -68,22 +69,17 @@ export function AdFormDialog({ open, onClose, onSaved, initial }: AdFormProps) {
     setUploading(true)
     setError('')
     try {
-      // Stream the file body directly to avoid Next.js 4 MB formData limit for large videos
       const safeName = file.name.replace(/[^a-zA-Z0-9._-]/g, '_')
-      const uploadUrl = `/api/upload?filename=${encodeURIComponent(safeName)}&type=${encodeURIComponent(file.type)}`
-      const res = await fetch(uploadUrl, {
-        method: 'POST',
-        headers: { 'Content-Type': file.type },
-        body: file,
-        // @ts-expect-error — duplex required for streaming in some browsers
-        duplex: 'half',
+      const blob = await upload(safeName, file, {
+        access: 'public',
+        handleUploadUrl: '/api/upload',
       })
-      const data = await res.json()
-      if (data.url) {
-        setContent(data.url)
+
+      if (blob.url) {
+        setContent(blob.url)
         setType(file.type.startsWith('video') ? 'video' : 'image')
       } else {
-        setError(data.error ?? 'Error al subir el archivo')
+        setError('Error al subir el archivo')
       }
     } catch {
       setError('Error al subir el archivo')
