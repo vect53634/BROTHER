@@ -4,7 +4,15 @@ const sql = neon(process.env.DATABASE_URL!)
 
 export { sql }
 
-export type BlockingScreen = 'none' | 'maintenance' | 'outage' | 'terminal' | 'loading'
+export type BlockingScreen = 'none' | 'maintenance' | 'outage' | 'terminal' | 'loading' | 'custom'
+
+export interface CustomScreen {
+  id: number
+  name: string
+  html: string
+  created_at: string
+  updated_at: string
+}
 
 export interface Ad {
   id: number
@@ -103,5 +111,56 @@ export async function setBlockingScreen(screen: BlockingScreen): Promise<void> {
   await sql`
     INSERT INTO display_settings (key, value) VALUES ('blocking_screen', ${screen})
     ON CONFLICT (key) DO UPDATE SET value = ${screen}
+  `
+}
+
+// ── Custom Screens ────────────────────────────────────────────────────────────
+
+export async function getCustomScreens(): Promise<CustomScreen[]> {
+  const rows = await sql`SELECT * FROM custom_screens ORDER BY created_at DESC`
+  return rows as CustomScreen[]
+}
+
+export async function getCustomScreen(id: number): Promise<CustomScreen | null> {
+  const rows = await sql`SELECT * FROM custom_screens WHERE id = ${id}`
+  return (rows[0] as CustomScreen) ?? null
+}
+
+export async function createCustomScreen(name: string, html: string): Promise<CustomScreen> {
+  const rows = await sql`
+    INSERT INTO custom_screens (name, html)
+    VALUES (${name}, ${html})
+    RETURNING *
+  `
+  return rows[0] as CustomScreen
+}
+
+export async function updateCustomScreen(id: number, name: string, html: string): Promise<CustomScreen> {
+  const rows = await sql`
+    UPDATE custom_screens
+    SET name = ${name}, html = ${html}, updated_at = NOW()
+    WHERE id = ${id}
+    RETURNING *
+  `
+  return rows[0] as CustomScreen
+}
+
+export async function deleteCustomScreen(id: number): Promise<void> {
+  await sql`DELETE FROM custom_screens WHERE id = ${id}`
+}
+
+export async function getActiveCustomScreenId(): Promise<number | null> {
+  const rows = await sql`SELECT value FROM display_settings WHERE key = 'active_custom_screen_id'`
+  const val = rows[0]?.value
+  if (!val) return null
+  const n = parseInt(val, 10)
+  return isNaN(n) ? null : n
+}
+
+export async function setActiveCustomScreenId(id: number | null): Promise<void> {
+  const val = id == null ? '' : String(id)
+  await sql`
+    INSERT INTO display_settings (key, value) VALUES ('active_custom_screen_id', ${val})
+    ON CONFLICT (key) DO UPDATE SET value = ${val}
   `
 }

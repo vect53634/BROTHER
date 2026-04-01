@@ -1,13 +1,6 @@
 import { put } from '@vercel/blob'
 import { type NextRequest, NextResponse } from 'next/server'
 
-// Disable Next.js body parser so large files can stream through
-export const config = {
-  api: {
-    bodyParser: false,
-  },
-}
-
 // Allow up to 5 minutes for large video uploads
 export const maxDuration = 300
 
