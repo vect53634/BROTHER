@@ -4,14 +4,16 @@ import { useState, useEffect, useCallback } from 'react'
 import { Loader2, MonitorOff, Wrench, Zap, Terminal, Cpu } from 'lucide-react'
 import type { BlockingScreen } from '@/lib/db'
 
-const SCREENS: {
+interface ScreenDef {
   id: BlockingScreen
   label: string
   description: string
   icon: React.ReactNode
   color: string
   bg: string
-}[] = [
+}
+
+const SCREENS: ScreenDef[] = [
   {
     id: 'none',
     label: 'Desactivado',
@@ -55,6 +57,7 @@ const SCREENS: {
 ]
 
 export function BlockingScreenPanel() {
+  const [mounted, setMounted] = useState(false)
   const [active, setActive] = useState<BlockingScreen>('none')
   const [saving, setSaving] = useState(false)
 
@@ -62,13 +65,14 @@ export function BlockingScreenPanel() {
     try {
       const res = await fetch('/api/admin/blocking-screen', { cache: 'no-store' })
       const data = await res.json()
-      if (data.screen) setActive(data.screen)
+      if (data.screen) setActive(data.screen as BlockingScreen)
     } catch {
       // silent
     }
   }, [])
 
   useEffect(() => {
+    setMounted(true)
     fetchCurrent()
   }, [fetchCurrent])
 
@@ -106,53 +110,66 @@ export function BlockingScreenPanel() {
         {saving && <Loader2 className="w-4 h-4 animate-spin" style={{ color: 'var(--dashboard-muted)' }} />}
       </div>
 
-      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-2">
-        {SCREENS.map(screen => {
-          const isActive = active === screen.id
-          return (
-            <button
-              key={screen.id}
-              onClick={() => activate(screen.id)}
-              disabled={saving}
-              className="flex flex-col items-start gap-2 p-3 rounded-lg border text-left transition-all disabled:opacity-50 disabled:cursor-not-allowed"
-              style={{
-                background: isActive ? screen.bg : 'var(--dashboard-input)',
-                borderColor: isActive ? screen.color : 'var(--dashboard-border)',
-                boxShadow: isActive ? `0 0 0 1px ${screen.color}40` : 'none',
-              }}
-            >
-              <div
-                className="w-8 h-8 rounded-md flex items-center justify-center"
+      {!mounted ? (
+        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-2">
+          {SCREENS.map(s => (
+            <div
+              key={s.id}
+              className="h-24 rounded-lg border animate-pulse"
+              style={{ background: 'var(--dashboard-input)', borderColor: 'var(--dashboard-border)' }}
+            />
+          ))}
+        </div>
+      ) : (
+        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-2">
+          {SCREENS.map(screen => {
+            const isActive = active === screen.id
+            const shadow = isActive ? '0 0 0 1px ' + screen.color + '40' : 'none'
+            return (
+              <button
+                key={screen.id}
+                onClick={() => activate(screen.id)}
+                disabled={saving}
+                className="flex flex-col items-start gap-2 p-3 rounded-lg border text-left transition-all disabled:opacity-50 disabled:cursor-not-allowed"
                 style={{
-                  background: isActive ? screen.bg : 'var(--dashboard-hover)',
-                  color: isActive ? screen.color : 'var(--dashboard-muted)',
+                  background: isActive ? screen.bg : 'var(--dashboard-input)',
+                  borderColor: isActive ? screen.color : 'var(--dashboard-border)',
+                  boxShadow: shadow,
                 }}
               >
-                {screen.icon}
-              </div>
-              <div>
-                <p
-                  className="text-xs font-semibold leading-snug"
-                  style={{ color: isActive ? screen.color : 'var(--dashboard-fg)' }}
+                <div
+                  className="w-8 h-8 rounded-md flex items-center justify-center"
+                  style={{
+                    background: isActive ? screen.bg : 'var(--dashboard-hover)',
+                    color: isActive ? screen.color : 'var(--dashboard-muted)',
+                  }}
                 >
-                  {screen.label}
-                </p>
-                <p className="text-[10px] mt-0.5 leading-snug" style={{ color: 'var(--dashboard-muted)' }}>
-                  {screen.description}
-                </p>
-              </div>
-              {isActive && (
-                <span
-                  className="text-[9px] font-bold uppercase tracking-widest px-1.5 py-0.5 rounded-full"
-                  style={{ background: screen.color, color: '#fff' }}
-                >
-                  Activo
-                </span>
-              )}
-            </button>
-          )
-        })}
-      </div>
+                  {screen.icon}
+                </div>
+                <div>
+                  <p
+                    className="text-xs font-semibold leading-snug"
+                    style={{ color: isActive ? screen.color : 'var(--dashboard-fg)' }}
+                  >
+                    {screen.label}
+                  </p>
+                  <p className="text-[10px] mt-0.5 leading-snug" style={{ color: 'var(--dashboard-muted)' }}>
+                    {screen.description}
+                  </p>
+                </div>
+                {isActive && (
+                  <span
+                    className="text-[9px] font-bold uppercase tracking-widest px-1.5 py-0.5 rounded-full"
+                    style={{ background: screen.color, color: '#fff' }}
+                  >
+                    Activo
+                  </span>
+                )}
+              </button>
+            )
+          })}
+        </div>
+      )}
     </section>
   )
 }
